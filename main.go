@@ -18,6 +18,8 @@ func init() {
 func main() {
 	flag.Parse()
 
+	var state State
+
 	// expand our user-given storage directory to be an absolute path
 	if abs, err := filepath.Abs(StorageDir); err != nil {
 		log.Printf("failed to expand storage directory: %s\n", err)
@@ -25,9 +27,6 @@ func main() {
 	} else {
 		StorageDir = abs
 	}
-
-	// setup our internal state
-	var state State
 
 	// setup our server routes
 	mux := http.NewServeMux()
@@ -43,5 +42,5 @@ func main() {
 }
 
 type State struct {
-	DB *Database
+	*Database
 }

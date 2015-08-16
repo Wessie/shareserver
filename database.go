@@ -3,9 +3,36 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/boltdb/bolt"
+	"golang.org/x/crypto/bcrypt"
+)
+
+/*
+Database layout:
+
+users:
+	<username>:
+		password: <hash>
+		profile: <json> // see UserProfile
+		files: <hashes>
+
+*/
+
+// bcryptCost indicates the cost to use in bcrypt password hash generation
+// NOTE: changing this is not retroactive currently, old passwords keep the
+// old cost.
+const bcryptCost = 13
+
+var (
+	userPasswordKey   = []byte("password")
+	userBucket        = []byte("users")
+	userProfileBucket = []byte("profile")
+
+	fileBucket  = []byte("files")
+	filePathKey = []byte("path")
 )
 
 type Database struct {
@@ -19,12 +46,20 @@ func (db *Database) NewUser(name string) *User {
 	}
 }
 
+func (db *Database) NewFile(sum []byte, path string) *File {
+	return &File{
+		Path: path,
+		Hash: sum,
+	}
+}
+
+// User retrieves a users data from the database
 func (db *Database) User(name string) (*User, error) {
 	name = strings.ToLower(name)
 	var u *User
 
 	err := db.bolt.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("users"))
+		b := tx.Bucket(userBucket)
 		if b == nil {
 			return errors.New("user does not exist")
 		}
@@ -34,60 +69,99 @@ func (db *Database) User(name string) (*User, error) {
 			return errors.New("user does not exist")
 		}
 
-		profile := userdb.Get([]byte("profile"))
+		profile := userdb.Get(userProfileBucket)
 		if profile == nil {
 			return errors.New("user does not have a profile")
 		}
 
 		u = &User{
 			Name: name,
+			pwd:  userdb.Get(userPasswordKey),
 			bolt: db.bolt,
 		}
 
-		u.RawProfile = append(u.RawProfile, profile...)
-		return json.Unmarshal(profile, u)
+		return json.Unmarshal(profile, &u.UserProfile)
 	})
 
 	return u, err
 }
 
-func (db *Database) File(hash string) (*File, error) {
+func (db *Database) File(hash []byte) (*File, error) {
 	var f *File
 
 	err := db.bolt.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("files"))
+		b := tx.Bucket(fileBucket)
 		if b == nil {
 			return errors.New("file does not exist")
 		}
 
-		fileInfo := b.Get([]byte(hash))
-		if fileInfo == nil {
+		filedb := b.Bucket(hash)
+		if filedb == nil {
 			return errors.New("file does not exist")
 		}
 
 		f = &File{
 			Hash: hash,
+			Path: string(filedb.Get(filePathKey)),
 			bolt: db.bolt,
 		}
 
-		f.RawInfo = append(f.RawInfo, fileInfo...)
-		return json.Unmarshal(fileInfo, f)
+		return nil
 	})
 
 	return f, err
 }
 
+// User represents a single user in the database
 type User struct {
 	Name string
-	Hash string
+	pwd  []byte
 
-	RawProfile []byte
-	bolt       *bolt.DB
+	UserProfile
+
+	bolt *bolt.DB
 }
+
+// ComparePassword compares pwd with the saved password
+func (u User) ComparePassword(pwd string) bool {
+	// empty known password is always a rejection.
+	if len(u.pwd) == 0 || len(pwd) == 0 {
+		return false
+	}
+
+	err := bcrypt.CompareHashAndPassword(u.pwd, []byte(pwd))
+
+	return err == nil
+}
+
+// SetPassword sets a new password for user.
+func (u *User) SetPassword(current, new string) bool {
+	// empty current password means we're setting our first password, this
+	// means we can skip the compare.
+	if len(u.pwd) != 0 && !u.ComparePassword(current) {
+		return false
+	}
+
+	bp, err := bcrypt.GenerateFromPassword([]byte(new), bcryptCost)
+	if err != nil {
+		log.Printf("critical: failed to generate bcrypt hash: %s", err)
+		return false
+	}
+
+	u.pwd = bp
+	return true
+}
+
+// UserProfile contains non-critical information about a User
+type UserProfile struct{}
 
 type File struct {
-	Hash string
+	Hash []byte
+	Path string
 
-	RawInfo []byte
-	bolt    *bolt.DB
+	FileInfo
+
+	bolt *bolt.DB
 }
+
+type FileInfo struct{}

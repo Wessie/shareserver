@@ -75,7 +75,8 @@ func (s *State) HandlePOST(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uri := s.AddFile(sum, newPath)
+	dbFile := s.NewFile(sum, newPath)
+	_ = dbFile
 
 	log.Printf("succeeded: %s --> %s\n", fileHeader.Filename, newPath)
 }
