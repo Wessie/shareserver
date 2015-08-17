@@ -13,13 +13,11 @@ import (
 )
 
 var MaxFileMemory int64
-var TempDir string
 var StorageDir string
 var Hash crypto.Hash = crypto.SHA1
 
 func init() {
 	flag.Int64Var(&MaxFileMemory, "maxfilememory", 16777216, "Maximum size of in-memory stored POST'd files")
-	flag.StringVar(&TempDir, "tempdir", os.TempDir(), "Temporary directory to use for uploads")
 	flag.StringVar(&StorageDir, "storedir", "store", "Directory to store uploaded files in")
 	flag.Var(hashChoice{&Hash}, "hash", "Hash algorithm to use for URL generation")
 }
@@ -70,13 +68,16 @@ func (s *State) HandlePOST(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	err = os.Rename(tempFile.Name(), newPath)
-	if err != nil {
+	if err != nil && !os.IsExist(err) {
 		log.Printf("failed to rename temporary file: %s\n", err)
 		return
 	}
 
 	dbFile := s.NewFile(sum, newPath)
-	_ = dbFile
+	if err = dbFile.Save(); err != nil {
+		log.Printf("failed to save file information: %s\n", err)
+		return
+	}
 
 	log.Printf("succeeded: %s --> %s\n", fileHeader.Filename, newPath)
 }

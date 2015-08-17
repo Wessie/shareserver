@@ -8,6 +8,11 @@ import (
 	"path/filepath"
 )
 
+// Configuration Values
+var (
+	TempDir string = "store/tmp"
+)
+
 var srv http.Server
 var mux = http.NewServeMux()
 
@@ -16,7 +21,20 @@ func init() {
 }
 
 func main() {
+	var err error
 	flag.Parse()
+
+	// setup configuration fields
+	TempDir, err = filepath.Abs(filepath.Join(StorageDir, "tmp"))
+	if err != nil {
+		log.Printf("unable to generate temporary directory: %s", err)
+		os.Exit(1)
+	}
+
+	if err = os.MkdirAll(TempDir, 0770); err != nil {
+		log.Printf("unable to create temporary directory: %s", err)
+		os.Exit(1)
+	}
 
 	var state State
 
@@ -34,7 +52,7 @@ func main() {
 
 	srv.Handler = mux
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if err != nil {
 		log.Printf("unable to listen for http: %s", err)
 		os.Exit(1)
