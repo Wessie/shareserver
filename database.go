@@ -223,6 +223,16 @@ type FileInfo struct {
 }
 
 func (f File) Save() error {
+	if len(f.Hash) == 0 {
+		return errors.New("invalid filehash: empty")
+	}
+	if len(f.Path) == 0 {
+		return errors.New("invalid filepath: empty")
+	}
+	if f.bolt == nil {
+		return errors.New("invalid file instance: no database")
+	}
+
 	return f.bolt.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists(fileBucket)
 		if err != nil {
