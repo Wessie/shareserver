@@ -1,44 +1,16 @@
-package main
+package shares
 
 import (
 	"crypto"
-	"fmt"
 	"hash"
 	"log"
 	"mime/multipart"
 	"os"
-	"strings"
 
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
 )
-
-type hashChoice struct {
-	*crypto.Hash
-}
-
-func (h hashChoice) Set(value string) error {
-	var hh crypto.Hash
-
-	switch strings.ToLower(value) {
-	case "sha1":
-		hh = crypto.SHA1
-	case "sha256":
-		hh = crypto.SHA256
-	case "sha512":
-		hh = crypto.SHA512
-	default:
-		return fmt.Errorf("unsupported hash function: %s", value)
-	}
-
-	*h.Hash = hh
-	return nil
-}
-
-func (h hashChoice) String() string {
-	return "sha1"
-}
 
 type HashedFile interface {
 	multipart.File

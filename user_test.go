@@ -1,4 +1,4 @@
-package main
+package shares
 
 import "golang.org/x/crypto/bcrypt"
 import "testing"
