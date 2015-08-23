@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Wessie/shareserver"
 )
@@ -34,7 +35,16 @@ func init() {
 
 func main() {
 	var err error
-	flag.Parse()
+	args := os.Args[1:]
+
+	if s := os.Getenv("SHARESERVER_OPTIONS"); s != "" {
+		args = strings.Fields(s)
+	}
+
+	if err = flag.CommandLine.Parse(args); err != nil {
+		log.Printf("failed to parse flags: %s\n", err)
+		os.Exit(1)
+	}
 
 	// setup configuration fields
 	// expand our user-given storage directory to be an absolute path
@@ -75,6 +85,7 @@ func main() {
 
 	srv.Handler = mux
 
+	log.Printf("starting shareserver on %s", srv.Addr)
 	err = srv.ListenAndServe()
 	if err != nil {
 		log.Printf("unable to listen for http: %s", err)
