@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type State struct {
@@ -90,6 +91,7 @@ func (s *State) HandlePOST(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	dbFile := s.NewFile(sum, newPath)
+	dbFile.Filename = fileHeader.Filename
 	if err = dbFile.Save(); err != nil {
 		log.Printf("failed to save file information: %s\n", err)
 		return
@@ -97,11 +99,15 @@ func (s *State) HandlePOST(rw http.ResponseWriter, r *http.Request) {
 
 	log.Printf("succeeded: %s --> %s\n", fileHeader.Filename, newPath)
 
-	fmt.Fprintf(rw, "%s%s", s.URLPrefix, s.ShortHash(sum))
+	fmt.Fprintf(rw, "%s%s%s", s.URLPrefix, s.ShortHash(sum), dbFile.Extension())
 }
 
 func (s *State) HandleGET(rw http.ResponseWriter, r *http.Request) {
-	hash := s.LongHash(r.URL.Path[1:])
+	period := strings.Index(r.URL.Path, ".")
+	if period == -1 {
+		period = len(r.URL.Path)
+	}
+	hash := s.LongHash(r.URL.Path[1:period])
 	if hash == nil {
 		log.Printf("no such file: %s", r.URL.Path)
 		return

@@ -158,6 +158,11 @@ func (db *Database) File(hash []byte) (*File, error) {
 			bolt: db.bolt,
 		}
 
+		err := json.Unmarshal(filedb.Get(fileInfoKey), &f.FileInfo)
+		if err != nil {
+			return errors.New("file does not exist")
+		}
+
 		return nil
 	})
 
