@@ -90,6 +90,7 @@ func (s *State) HandlePOST(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	dbFile := s.NewFile(sum, newPath)
+	dbFile.Filename = fileHeader.Filename
 	if err = dbFile.Save(); err != nil {
 		log.Printf("failed to save file information: %s\n", err)
 		return
@@ -97,11 +98,18 @@ func (s *State) HandlePOST(rw http.ResponseWriter, r *http.Request) {
 
 	log.Printf("succeeded: %s --> %s\n", fileHeader.Filename, newPath)
 
-	fmt.Fprintf(rw, "%s%s", s.URLPrefix, s.ShortHash(sum))
+	fmt.Fprintf(rw, "%s%s%s",
+		s.URLPrefix,
+		s.ShortHash(sum),
+		filepath.Ext(fileHeader.Filename),
+	)
 }
 
 func (s *State) HandleGET(rw http.ResponseWriter, r *http.Request) {
-	hash := s.LongHash(r.URL.Path[1:])
+	extSize := len(filepath.Ext(r.URL.Path))
+
+	path := r.URL.Path[1 : len(r.URL.Path)-extSize]
+	hash := s.LongHash(path)
 	if hash == nil {
 		log.Printf("no such file: %s", r.URL.Path)
 		return
