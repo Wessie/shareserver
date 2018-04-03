@@ -101,12 +101,12 @@ func (s *State) HandlePOST(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, "%s%s%s",
 		s.URLPrefix,
 		s.ShortHash(sum),
-		filepath.Ext(fileHeader.Filename),
+		Ext(fileHeader.Filename),
 	)
 }
 
 func (s *State) HandleGET(rw http.ResponseWriter, r *http.Request) {
-	extSize := len(filepath.Ext(r.URL.Path))
+	extSize := len(Ext(r.URL.Path))
 
 	path := r.URL.Path[1 : len(r.URL.Path)-extSize]
 	hash := s.LongHash(path)
