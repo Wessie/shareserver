@@ -54,13 +54,19 @@ func main() {
 		return
 	}
 
+	created := create && err != nil
+
 	if chpasswd == true {
-		fmt.Printf("Enter current password:")
-		curPass := gopass.GetPasswd()
-		fmt.Printf("Enter new password:")
-		newPass := gopass.GetPasswd()
-		fmt.Printf("Enter new password again:")
-		if another := gopass.GetPasswd() ; string(newPass) != string(another) {
+		var curPass []byte
+		if !created {
+			fmt.Printf("enter current password:")
+			curPass = getPasswd()
+		}
+
+		fmt.Printf("enter new password:")
+		newPass := getPasswd()
+		fmt.Printf("enter new password again:")
+		if another := getPasswd(); string(newPass) != string(another) {
 			fmt.Printf("new passwords did not match\n")
 			return
 		}
@@ -75,4 +81,13 @@ func main() {
 		fmt.Printf("failed to save user after creation: %s\n", err)
 		return
 	}
+}
+
+func getPasswd() []byte {
+	s, err := gopass.GetPasswd()
+	if err != nil {
+		fmt.Println("failed to retrieve password")
+		os.Exit(1)
+	}
+	return s
 }
