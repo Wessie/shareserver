@@ -3,7 +3,6 @@ package shares
 import (
 	"encoding/json"
 	"errors"
-	"strings"
 
 	"github.com/boltdb/bolt"
 )
@@ -64,16 +63,4 @@ func (f File) Save() error {
 
 		return nil
 	})
-}
-
-func (f File) Extension() string {
-	period := strings.LastIndex(f.Filename, ".")
-	if period == -1 {
-		return ""
-	}
-	next := strings.LastIndex(f.Filename[:period], ".")
-	if next != -1 && period - next <= 4 {
-		period = next
-	}
-	return f.Filename[period:]
 }
