@@ -23,6 +23,7 @@ var (
 	StorageDir    string = "store"
 	URLPrefix     string
 	Hash          crypto.Hash = crypto.SHA1
+	useUserCache  bool
 )
 
 func init() {
@@ -31,6 +32,7 @@ func init() {
 	flag.StringVar(&StorageDir, "storedir", "store", "Directory to store uploaded files in")
 	flag.StringVar(&URLPrefix, "prefix", "", "Prefix of URL to send to uploading client")
 	flag.Var(hashChoice{&Hash}, "hash", "Hash algorithm to use for URL generation")
+	flag.BoolVar(&useUserCache, "usercache", true, "Use in-memory user cache")
 }
 
 func main() {
@@ -69,6 +71,14 @@ func main() {
 		TempDir:       TempDir,
 		URLPrefix:     URLPrefix,
 		Hash:          Hash,
+	}
+
+	if useUserCache {
+		log.Println("info: using in-memory user cache")
+		state.Authenticate = state.AuthenticateCache
+	} else {
+		log.Println("info: not using in-memory user cache")
+		state.Authenticate = state.AuthenticateCrypt
 	}
 
 	// setup boltdb
